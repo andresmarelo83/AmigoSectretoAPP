@@ -1,4 +1,3 @@
-
 # 🎁 Aplicación de Amigo Secreto
 
 Una aplicación web interactiva para organizar sorteos de amigo secreto de manera fácil y privada.
