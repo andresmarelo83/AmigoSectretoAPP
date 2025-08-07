@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Función para configurar los eventos del input
 function configurarEventosInput() {
-    const inputAmigo = document.getElementById('amigo');
+    let inputAmigo = document.getElementById('amigo');
     
     if (!inputAmigo) {
         console.warn('Input "amigo" no encontrado');
@@ -234,7 +234,7 @@ function generarAsignacionesSecretas() {
     
     // Mezclar el array de receptores
     for (let i = participantesReceptores.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        let j = Math.floor(Math.random() * (i + 1));
         [participantesReceptores[i], participantesReceptores[j]] = [participantesReceptores[j], participantesReceptores[i]];
     }
     
@@ -263,7 +263,7 @@ function generarAsignacionesSecretas() {
 // Función para mostrar la interfaz de sorteo individual
 function mostrarInterfazSorteoIndividual() {
     // Ocultar la sección de agregar participantes
-    const seccionInput = document.querySelector('.input-section');
+    let seccionInput = document.querySelector('.input-section');
     seccionInput.style.display = 'none';
     
     // Buscar si ya existe la sección de sorteo y eliminarla
@@ -332,11 +332,11 @@ function mostrarInterfazSorteoIndividual() {
 
 // Función para configurar el evento del input en la pantalla de sorteo
 function configurarEventoInputSorteo() {
-    const inputSorteo = document.getElementById('input-participante-sorteo');
+    let inputSorteo = document.getElementById('input-participante-sorteo');
     
     // Agregar evento para detectar cambios en el input
     inputSorteo.addEventListener('input', function() {
-        const nombreEscrito = this.value.trim();
+        let nombreEscrito = this.value.trim();
         resaltarParticipante(nombreEscrito);
     });
     
@@ -353,12 +353,12 @@ function configurarEventoInputSorteo() {
 
 // Función para resaltar el participante que está escribiendo
 function resaltarParticipante(nombreEscrito) {
-    const cajas = document.querySelectorAll('#cajas-participantes-sorteo .participante-caja-sorteo');
+    let cajas = document.querySelectorAll('#cajas-participantes-sorteo .participante-caja-sorteo');
     
     cajas.forEach(caja => {
-        const nombreParticipante = caja.textContent.replace(' ✓', '').trim();
-        const yaeSorteo = !participantesRestantes.includes(nombreParticipante);
-        const yaSeIdentifico = participantesIdentificados.includes(nombreParticipante);
+        let nombreParticipante = caja.textContent.replace(' ✓', '').trim();
+        let yaeSorteo = !participantesRestantes.includes(nombreParticipante);
+        let yaSeIdentifico = participantesIdentificados.includes(nombreParticipante);
         
         if (nombreEscrito.toLowerCase() === nombreParticipante.toLowerCase() && nombreEscrito !== '') {
             // Marcar como identificado si coincide exactamente
@@ -434,7 +434,7 @@ function resaltarParticipante(nombreEscrito) {
                 
                 // Agregar indicador visual de "identificado"
                 if (!caja.querySelector('.identificado-icon')) {
-                    const iconoIdentificado = document.createElement('span');
+                    let iconoIdentificado = document.createElement('span');
                     iconoIdentificado.className = 'identificado-icon';
                     iconoIdentificado.innerHTML = ' 👁️';
                     iconoIdentificado.style.fontSize = '12px';
@@ -478,7 +478,7 @@ function resaltarParticipante(nombreEscrito) {
     
     // Agregar CSS para la animación glow si no existe
     if (!document.getElementById('glow-animation-style')) {
-        const style = document.createElement('style');
+        let style = document.createElement('style');
         style.id = 'glow-animation-style';
         style.textContent = `
             @keyframes glow {
@@ -492,7 +492,7 @@ function resaltarParticipante(nombreEscrito) {
 
 // Función para mostrar participantes en la pantalla de sorteo con estado visual
 function mostrarParticipantesEnSorteo() {
-    const contenedorSorteo = document.getElementById('participantes-sorteo-visual');
+    let contenedorSorteo = document.getElementById('participantes-sorteo-visual');
     
     // Crear contenedor para las cajas de participantes si no existe
     let contenedorCajas = document.getElementById('cajas-participantes-sorteo');
@@ -514,10 +514,10 @@ function mostrarParticipantesEnSorteo() {
     
     // Crear cajas para cada participante
     listaParticipantes.forEach(participante => {
-        const yaeSorteo = !participantesRestantes.includes(participante);
-        const yaSeIdentifico = participantesIdentificados.includes(participante);
+        let yaeSorteo = !participantesRestantes.includes(participante);
+        let yaSeIdentifico = participantesIdentificados.includes(participante);
         
-        const cajaParticipante = document.createElement('div');
+        let cajaParticipante = document.createElement('div');
         cajaParticipante.className = 'participante-caja-sorteo';
         
         // Estilo según el estado del participante
@@ -538,7 +538,7 @@ function mostrarParticipantesEnSorteo() {
             `;
             
             // Agregar check mark
-            const checkIcon = document.createElement('span');
+            let checkIcon = document.createElement('span');
             checkIcon.innerHTML = ' ✓';
             checkIcon.style.color = '#27ae60';
             checkIcon.style.fontWeight = 'bold';
@@ -569,7 +569,7 @@ function mostrarParticipantesEnSorteo() {
             
             // Agregar texto e icono de identificado
             cajaParticipante.appendChild(document.createTextNode(participante));
-            const iconoIdentificado = document.createElement('span');
+            let iconoIdentificado = document.createElement('span');
             iconoIdentificado.className = 'identificado-icon';
             iconoIdentificado.innerHTML = ' 👁️';
             iconoIdentificado.style.fontSize = '12px';
@@ -606,7 +606,7 @@ function mostrarParticipantesEnSorteo() {
     
     // Agregar CSS para la animación pulse
     if (!document.getElementById('pulse-animation-style')) {
-        const style = document.createElement('style');
+        let style = document.createElement('style');
         style.id = 'pulse-animation-style';
         style.textContent = `
             @keyframes pulse {
@@ -621,9 +621,9 @@ function mostrarParticipantesEnSorteo() {
 
 // Función para revelar el amigo secreto de un participante específico
 function revelarAmigoSecreto() {
-    const inputParticipante = document.getElementById('input-participante-sorteo');
-    const nombreParticipante = inputParticipante.value.trim();
-    const resultadoDiv = document.getElementById('resultado-sorteo');
+    let inputParticipante = document.getElementById('input-participante-sorteo');
+    let nombreParticipante = inputParticipante.value.trim();
+    let resultadoDiv = document.getElementById('resultado-sorteo');
     
     // Validar que el nombre no esté vacío
     if (nombreParticipante === '') {
@@ -656,7 +656,7 @@ function revelarAmigoSecreto() {
     }
     
     // Obtener el amigo secreto asignado
-    const amigoSecreto = asignaciones[nombreParticipante];
+    let amigoSecreto = asignaciones[nombreParticipante];
     
     // Mostrar el resultado
     resultadoDiv.innerHTML = `
@@ -692,7 +692,7 @@ function siguienteParticipante(participanteActual) {
     document.getElementById('resultado-sorteo').innerHTML = '';
     
     // Actualizar el contador de participantes restantes
-    const contadorDiv = document.querySelector('#seccion-sorteo-individual div[style*="linear-gradient"]');
+    let contadorDiv = document.querySelector('#seccion-sorteo-individual div[style*="linear-gradient"]');
     contadorDiv.innerHTML = `<h3>Participantes restantes por sortear: ${participantesRestantes.length}</h3>`;
     
     // Actualizar la visualización de participantes
@@ -717,11 +717,11 @@ function siguienteParticipante(participanteActual) {
 // Función para volver a la pantalla de agregar participantes
 function volverAgregarParticipantes() {
     // Mostrar la sección de input
-    const seccionInput = document.querySelector('.input-section');
+    let seccionInput = document.querySelector('.input-section');
     seccionInput.style.display = 'block';
     
     // Remover completamente la sección de sorteo para evitar conflictos
-    const seccionSorteo = document.getElementById('seccion-sorteo-individual');
+    let seccionSorteo = document.getElementById('seccion-sorteo-individual');
     if (seccionSorteo) {
         seccionSorteo.remove();
     }
@@ -736,9 +736,9 @@ function volverAgregarParticipantes() {
     configurarEventosInput();
     
     // Limpiar estilos dinámicos que puedan causar conflictos
-    const stylesIds = ['pulse-animation-style', 'glow-animation-style'];
+    let stylesIds = ['pulse-animation-style', 'glow-animation-style'];
     stylesIds.forEach(id => {
-        const existingStyle = document.getElementById(id);
+        let existingStyle = document.getElementById(id);
         if (existingStyle) {
             existingStyle.remove();
         }
