@@ -3,10 +3,27 @@
 // Función para cambiar el texto del h1 cada 2 segundos
 function cambiarTextoH1() {
     let h1 = document.querySelector('.main-title');
+    
+    // Fijar las dimensiones del h1 para evitar que se muevan otros elementos
+    h1.style.cssText = `
+        min-height: 80px;
+        max-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 20px 0;
+        overflow: hidden;
+        line-height: 1.2;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+    `;
+    
     let mensajes = [
         'BIENVENIDOS', 
         'A LA APLICACION',
-        'PARA SORTEAR EL JUEGO DEL',
+        'PARA SORTEAR', 
+        'EL JUEGO DEL',
         'AMIGO SECRETO.'
     ];
     
@@ -26,7 +43,36 @@ function cambiarTextoH1() {
 }
 
 // Iniciar la función cuando se carga la página
-document.addEventListener('DOMContentLoaded', cambiarTextoH1);
+document.addEventListener('DOMContentLoaded', function() {
+    cambiarTextoH1();
+    configurarEventosInput();
+});
+
+// Función para configurar los eventos del input
+function configurarEventosInput() {
+    const inputAmigo = document.getElementById('amigo');
+    
+    if (!inputAmigo) {
+        console.warn('Input "amigo" no encontrado');
+        return;
+    }
+    
+    // Remover eventos anteriores para evitar duplicados
+    inputAmigo.removeEventListener('keypress', manejarEnterAgregarAmigo);
+    
+    // Agregar evento para detectar la tecla Enter
+    inputAmigo.addEventListener('keypress', manejarEnterAgregarAmigo);
+    
+    // Enfocar automáticamente el input al cargar la página
+    inputAmigo.focus();
+}
+
+// Función separada para manejar el evento Enter
+function manejarEnterAgregarAmigo(event) {
+    if (event.key === 'Enter') {
+        agregarAmigo();
+    }
+}
 
 //_____________________________________________________________________________________
 
@@ -63,6 +109,9 @@ function agregarAmigo() {
     
     // Mostrar el nombre agregado en el DOM
     mostrarParticipanteAgregado(nombreAmigo);
+    
+    // Enfocar automáticamente el input para el siguiente nombre
+    inputAmigo.focus();
 }
 
 // Función para actualizar el contador de participantes
@@ -75,6 +124,7 @@ function actualizarContador() {
         contador = document.createElement('p');
         contador.id = 'contador-participantes';
         contador.className = 'contador-texto';
+        // Estilos para el contador de participantes
         contador.style.cssText = `
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -121,6 +171,7 @@ function mostrarParticipanteAgregado(nombre) {
     // Crear la caja del participante
     let cajaParticipante = document.createElement('div');
     cajaParticipante.className = 'participante-caja';
+     // Estilos para los nombres de participantes
     cajaParticipante.style.cssText = `
         background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
         color: white;
@@ -148,7 +199,556 @@ function mostrarParticipanteAgregado(nombre) {
     contenedorParticipantes.appendChild(cajaParticipante);
 }
 
+//_____________________________________________________________________________________
 
+// Variables para el sistema de sorteo
+let asignaciones = {}; // Objeto para guardar las asignaciones de amigo secreto
+let participantesRestantes = []; // Array de participantes que aún no han sorteado
+let yaSeRealizoSorteo = false; // Flag para saber si ya se realizó el sorteo inicial
+let participantesIdentificados = []; // Array para guardar los participantes que ya se identificaron escribiendo su nombre
+
+// Función principal para iniciar el sorteo
+function sortearAmigo() {
+    // Validar que haya al menos 2 participantes
+    if (listaParticipantes.length < 2) {
+        alert('Se necesitan al menos 2 participantes para realizar el sorteo');
+        return;
+    }
+    
+    // Siempre generar nuevas asignaciones cuando se inicia un sorteo
+    generarAsignacionesSecretas();
+    yaSeRealizoSorteo = true;
+    
+    // Mostrar la interfaz de sorteo individual
+    mostrarInterfazSorteoIndividual();
+}
+
+// Función para generar todas las asignaciones de amigo secreto
+function generarAsignacionesSecretas() {
+    // Crear una copia del array de participantes para mezclar
+    let participantesPorAsignar = [...listaParticipantes];
+    let participantesReceptores = [...listaParticipantes];
+    
+    // Limpiar asignaciones anteriores
+    asignaciones = {};
+    
+    // Mezclar el array de receptores
+    for (let i = participantesReceptores.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [participantesReceptores[i], participantesReceptores[j]] = [participantesReceptores[j], participantesReceptores[i]];
+    }
+    
+    // Asignar cada participante a otro, asegurándose de que nadie se tenga a sí mismo
+    for (let i = 0; i < participantesPorAsignar.length; i++) {
+        let participante = participantesPorAsignar[i];
+        let receptor = participantesReceptores[i];
+        
+        // Si el participante se tiene a sí mismo, intercambiar con el siguiente
+        if (participante === receptor) {
+            let siguienteIndice = (i + 1) % participantesReceptores.length;
+            [participantesReceptores[i], participantesReceptores[siguienteIndice]] = 
+            [participantesReceptores[siguienteIndice], participantesReceptores[i]];
+            receptor = participantesReceptores[i];
+        }
+        
+        asignaciones[participante] = receptor;
+    }
+    
+    // Copiar la lista de participantes para el sorteo individual
+    participantesRestantes = [...listaParticipantes];
+    
+    console.log('Asignaciones generadas:', asignaciones);
+}
+
+// Función para mostrar la interfaz de sorteo individual
+function mostrarInterfazSorteoIndividual() {
+    // Ocultar la sección de agregar participantes
+    const seccionInput = document.querySelector('.input-section');
+    seccionInput.style.display = 'none';
+    
+    // Buscar si ya existe la sección de sorteo y eliminarla
+    let seccionSorteoExistente = document.getElementById('seccion-sorteo-individual');
+    if (seccionSorteoExistente) {
+        seccionSorteoExistente.remove();
+    }
+    
+    // Crear nueva sección de sorteo individual
+    let seccionSorteo = document.createElement('section');
+    seccionSorteo.id = 'seccion-sorteo-individual';
+    seccionSorteo.className = 'sorteo-section';
+    seccionSorteo.style.cssText = `
+        text-align: center;
+        padding: 20px;
+        margin: 20px 0;
+    `;
+    
+    // Insertar después del main-content
+    let mainContent = document.querySelector('.main-content');
+    mainContent.appendChild(seccionSorteo);
+    
+    // Crear el contenido de la sección de sorteo
+    seccionSorteo.innerHTML = `
+        <h2 style="color: #667eea; margin-bottom: 20px;">🎁 Sorteo Individual de Amigo Secreto</h2>
+        <p style="font-size: 18px; margin-bottom: 20px;">
+            Cada participante debe acercarse uno por uno para ver su amigo secreto
+        </p>
+        
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 20px; border-radius: 15px; margin: 20px 0; color: white;">
+            <h3>Participantes restantes por sortear: ${participantesRestantes.length}</h3>
+        </div>
+        
+        <div id="participantes-sorteo-visual" style="margin: 20px 0;">
+            <h3 style="color: #4a5568; margin-bottom: 15px;">👥 Lista de Participantes</h3>
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <input type="text" id="input-participante-sorteo" 
+                   placeholder="Escribe tu nombre para ver tu amigo secreto"
+                   style="padding: 12px; font-size: 16px; border-radius: 8px; 
+                          border: 2px solid #667eea; width: 300px; margin-right: 10px;">
+            <button onclick="revelarAmigoSecreto()" 
+                    style="padding: 12px 20px; font-size: 16px; background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); 
+                           color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Ver mi Amigo Secreto
+            </button>
+        </div>
+        
+        <div id="resultado-sorteo" style="margin: 20px 0; min-height: 100px;"></div>
+        
+        <button onclick="volverAgregarParticipantes()" 
+                style="padding: 10px 15px; background: #6c757d; color: white; 
+                       border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+            Volver a Agregar Participantes
+        </button>
+    `;
+    
+    // Mostrar los participantes en la pantalla de sorteo
+    mostrarParticipantesEnSorteo();
+    
+    // Agregar evento para cambiar color al escribir en el input
+    configurarEventoInputSorteo();
+}
+
+// Función para configurar el evento del input en la pantalla de sorteo
+function configurarEventoInputSorteo() {
+    const inputSorteo = document.getElementById('input-participante-sorteo');
+    
+    // Agregar evento para detectar cambios en el input
+    inputSorteo.addEventListener('input', function() {
+        const nombreEscrito = this.value.trim();
+        resaltarParticipante(nombreEscrito);
+    });
+    
+    // Agregar evento para detectar la tecla Enter
+    inputSorteo.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            revelarAmigoSecreto();
+        }
+    });
+    
+    // Enfocar automáticamente el input
+    inputSorteo.focus();
+}
+
+// Función para resaltar el participante que está escribiendo
+function resaltarParticipante(nombreEscrito) {
+    const cajas = document.querySelectorAll('#cajas-participantes-sorteo .participante-caja-sorteo');
+    
+    cajas.forEach(caja => {
+        const nombreParticipante = caja.textContent.replace(' ✓', '').trim();
+        const yaeSorteo = !participantesRestantes.includes(nombreParticipante);
+        const yaSeIdentifico = participantesIdentificados.includes(nombreParticipante);
+        
+        if (nombreEscrito.toLowerCase() === nombreParticipante.toLowerCase() && nombreEscrito !== '') {
+            // Marcar como identificado si coincide exactamente
+            if (!participantesIdentificados.includes(nombreParticipante)) {
+                participantesIdentificados.push(nombreParticipante);
+            }
+            
+            // Resaltar con color especial si coincide el nombre
+            if (yaeSorteo) {
+                // Si ya sorteó, mantener el estilo tachado pero con color diferente
+                caja.style.cssText = `
+                    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    box-shadow: 0 5px 15px rgba(243, 156, 18, 0.5);
+                    border: 3px solid #f39c12;
+                    opacity: 1;
+                    position: relative;
+                    text-decoration: line-through;
+                    transform: scale(1.1);
+                    transition: all 0.3s ease;
+                `;
+            } else {
+                // Si está pendiente, resaltar con color verde brillante
+                caja.style.cssText = `
+                    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    box-shadow: 0 5px 15px rgba(0, 184, 148, 0.5);
+                    border: 3px solid #00b894;
+                    transform: scale(1.1);
+                    transition: all 0.3s ease;
+                    animation: glow 1s infinite alternate;
+                `;
+            }
+        } else {
+            // Aplicar estilo según el estado del participante
+            if (yaeSorteo) {
+                // Participante que ya sorteó - estilo desactivado
+                caja.style.cssText = `
+                    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    border: 2px solid #7f8c8d;
+                    opacity: 0.7;
+                    position: relative;
+                    text-decoration: line-through;
+                `;
+            } else if (yaSeIdentifico) {
+                // Participante que se identificó pero aún no ha sorteado - color intermedio
+                caja.style.cssText = `
+                    background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    box-shadow: 0 3px 8px rgba(108, 92, 231, 0.3);
+                    border: 2px solid #6c5ce7;
+                    transition: transform 0.2s ease;
+                    position: relative;
+                `;
+                
+                // Agregar indicador visual de "identificado"
+                if (!caja.querySelector('.identificado-icon')) {
+                    const iconoIdentificado = document.createElement('span');
+                    iconoIdentificado.className = 'identificado-icon';
+                    iconoIdentificado.innerHTML = ' 👁️';
+                    iconoIdentificado.style.fontSize = '12px';
+                    caja.appendChild(iconoIdentificado);
+                }
+                
+                // Mantener efecto hover
+                caja.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                });
+                
+                caja.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            } else {
+                // Participante pendiente sin identificar - estilo original
+                caja.style.cssText = `
+                    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+                    border: 2px solid #0984e3;
+                    transition: transform 0.2s ease;
+                    animation: pulse 2s infinite;
+                `;
+                
+                // Mantener efecto hover
+                caja.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                });
+                
+                caja.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            }
+        }
+    });
+    
+    // Agregar CSS para la animación glow si no existe
+    if (!document.getElementById('glow-animation-style')) {
+        const style = document.createElement('style');
+        style.id = 'glow-animation-style';
+        style.textContent = `
+            @keyframes glow {
+                0% { box-shadow: 0 5px 15px rgba(0, 184, 148, 0.5); }
+                100% { box-shadow: 0 8px 25px rgba(0, 184, 148, 0.8); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Función para mostrar participantes en la pantalla de sorteo con estado visual
+function mostrarParticipantesEnSorteo() {
+    const contenedorSorteo = document.getElementById('participantes-sorteo-visual');
+    
+    // Crear contenedor para las cajas de participantes si no existe
+    let contenedorCajas = document.getElementById('cajas-participantes-sorteo');
+    if (!contenedorCajas) {
+        contenedorCajas = document.createElement('div');
+        contenedorCajas.id = 'cajas-participantes-sorteo';
+        contenedorCajas.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        `;
+        contenedorSorteo.appendChild(contenedorCajas);
+    }
+    
+    // Limpiar contenedor
+    contenedorCajas.innerHTML = '';
+    
+    // Crear cajas para cada participante
+    listaParticipantes.forEach(participante => {
+        const yaeSorteo = !participantesRestantes.includes(participante);
+        const yaSeIdentifico = participantesIdentificados.includes(participante);
+        
+        const cajaParticipante = document.createElement('div');
+        cajaParticipante.className = 'participante-caja-sorteo';
+        
+        // Estilo según el estado del participante
+        if (yaeSorteo) {
+            // Participante que ya sorteó - estilo desactivado
+            cajaParticipante.style.cssText = `
+                background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 500;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                border: 2px solid #7f8c8d;
+                opacity: 0.7;
+                position: relative;
+                text-decoration: line-through;
+            `;
+            
+            // Agregar check mark
+            const checkIcon = document.createElement('span');
+            checkIcon.innerHTML = ' ✓';
+            checkIcon.style.color = '#27ae60';
+            checkIcon.style.fontWeight = 'bold';
+            cajaParticipante.appendChild(document.createTextNode(participante));
+            cajaParticipante.appendChild(checkIcon);
+        } else if (yaSeIdentifico) {
+            // Participante que se identificó pero aún no ha sorteado - color intermedio
+            cajaParticipante.style.cssText = `
+                background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 500;
+                box-shadow: 0 3px 8px rgba(108, 92, 231, 0.3);
+                border: 2px solid #6c5ce7;
+                transition: transform 0.2s ease;
+            `;
+            
+            // Agregar efecto hover
+            cajaParticipante.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            
+            cajaParticipante.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            // Agregar texto e icono de identificado
+            cajaParticipante.appendChild(document.createTextNode(participante));
+            const iconoIdentificado = document.createElement('span');
+            iconoIdentificado.className = 'identificado-icon';
+            iconoIdentificado.innerHTML = ' 👁️';
+            iconoIdentificado.style.fontSize = '12px';
+            cajaParticipante.appendChild(iconoIdentificado);
+        } else {
+            // Participante pendiente sin identificar - estilo activo original
+            cajaParticipante.style.cssText = `
+                background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 500;
+                box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+                border: 2px solid #0984e3;
+                transition: transform 0.2s ease;
+                animation: pulse 2s infinite;
+            `;
+            
+            // Agregar efecto hover y animación
+            cajaParticipante.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            
+            cajaParticipante.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            cajaParticipante.textContent = participante;
+        }
+        
+        contenedorCajas.appendChild(cajaParticipante);
+    });
+    
+    // Agregar CSS para la animación pulse
+    if (!document.getElementById('pulse-animation-style')) {
+        const style = document.createElement('style');
+        style.id = 'pulse-animation-style';
+        style.textContent = `
+            @keyframes pulse {
+                0% { box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2); }
+                50% { box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4); }
+                100% { box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Función para revelar el amigo secreto de un participante específico
+function revelarAmigoSecreto() {
+    const inputParticipante = document.getElementById('input-participante-sorteo');
+    const nombreParticipante = inputParticipante.value.trim();
+    const resultadoDiv = document.getElementById('resultado-sorteo');
+    
+    // Validar que el nombre no esté vacío
+    if (nombreParticipante === '') {
+        resultadoDiv.innerHTML = `
+            <div style="background: #ff7675; color: white; padding: 15px; 
+                        border-radius: 8px; margin: 10px 0;">
+                ⚠️ Por favor, escribe tu nombre
+            </div>`;
+        return;
+    }
+    
+    // Validar que el participante esté en la lista
+    if (!listaParticipantes.includes(nombreParticipante)) {
+        resultadoDiv.innerHTML = `
+            <div style="background: #ff7675; color: white; padding: 15px; 
+                        border-radius: 8px; margin: 10px 0;">
+                ❌ No estás en la lista de participantes
+            </div>`;
+        return;
+    }
+    
+    // Validar que el participante no haya sorteado ya
+    if (!participantesRestantes.includes(nombreParticipante)) {
+        resultadoDiv.innerHTML = `
+            <div style="background: #fdcb6e; color: #2d3436; padding: 15px; 
+                        border-radius: 8px; margin: 10px 0;">
+                ⚠️ Ya has visto tu amigo secreto
+            </div>`;
+        return;
+    }
+    
+    // Obtener el amigo secreto asignado
+    const amigoSecreto = asignaciones[nombreParticipante];
+    
+    // Mostrar el resultado
+    resultadoDiv.innerHTML = `
+        <div style="background: linear-gradient(135deg, #00b894 0%, #00a085 100%); 
+                    color: white; padding: 20px; border-radius: 15px; margin: 20px 0;
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);">
+            <h3 style="margin-bottom: 15px;">🎉 ¡Tu Amigo Secreto es!</h3>
+            <h2 style="font-size: 28px; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+                ${amigoSecreto}
+            </h2>
+            <p style="margin-top: 15px; font-style: italic;">
+                ¡Recuerda mantenerlo en secreto! 🤫
+            </p>
+        </div>
+        
+        <button onclick="siguienteParticipante('${nombreParticipante}')" 
+                style="padding: 12px 20px; background: #74b9ff; color: white; 
+                       border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+            Siguiente Participante
+        </button>
+    `;
+    
+    // Limpiar el input
+    inputParticipante.value = '';
+}
+
+// Función para continuar con el siguiente participante
+function siguienteParticipante(participanteActual) {
+    // Remover al participante actual de la lista de restantes
+    participantesRestantes = participantesRestantes.filter(p => p !== participanteActual);
+    
+    // Limpiar el resultado
+    document.getElementById('resultado-sorteo').innerHTML = '';
+    
+    // Actualizar el contador de participantes restantes
+    const contadorDiv = document.querySelector('#seccion-sorteo-individual div[style*="linear-gradient"]');
+    contadorDiv.innerHTML = `<h3>Participantes restantes por sortear: ${participantesRestantes.length}</h3>`;
+    
+    // Actualizar la visualización de participantes
+    mostrarParticipantesEnSorteo();
+    
+    // Si no quedan más participantes, mostrar mensaje final
+    if (participantesRestantes.length === 0) {
+        document.getElementById('resultado-sorteo').innerHTML = `
+            <div style="background: linear-gradient(135deg, #e17055 0%, #d63031 100%); 
+                        color: white; padding: 25px; border-radius: 15px; margin: 20px 0;">
+                <h2>🎊 ¡Sorteo Completado!</h2>
+                <p style="font-size: 18px; margin-top: 10px;">
+                    Todos los participantes ya conocen su amigo secreto
+                </p>
+                <p style="margin-top: 15px; font-style: italic;">
+                    ¡Que disfruten el intercambio de regalos! 🎁
+                </p>
+            </div>`;
+    }
+}
+
+// Función para volver a la pantalla de agregar participantes
+function volverAgregarParticipantes() {
+    // Mostrar la sección de input
+    const seccionInput = document.querySelector('.input-section');
+    seccionInput.style.display = 'block';
+    
+    // Remover completamente la sección de sorteo para evitar conflictos
+    const seccionSorteo = document.getElementById('seccion-sorteo-individual');
+    if (seccionSorteo) {
+        seccionSorteo.remove();
+    }
+    
+    // Resetear variables del sorteo para permitir un nuevo sorteo
+    yaSeRealizoSorteo = false;
+    participantesRestantes = [];
+    participantesIdentificados = [];
+    asignaciones = {};
+    
+    // Reconfigurar eventos del input principal
+    configurarEventosInput();
+    
+    // Limpiar estilos dinámicos que puedan causar conflictos
+    const stylesIds = ['pulse-animation-style', 'glow-animation-style'];
+    stylesIds.forEach(id => {
+        const existingStyle = document.getElementById(id);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+    });
+    
+    // Mostrar mensaje de confirmación en consola para debug
+    console.log('Volviendo a pantalla principal - Variables reseteadas y elementos limpiados');
+}
+
+//____________________________________________________________________________________________
 
 
 
